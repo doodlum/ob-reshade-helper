@@ -17,12 +17,8 @@
 #include <shared_mutex>
 
 #include <windows.h>
-#include <xinput.h>
-#include <ScriptUtils.h>
-#pragma comment(lib, "xinput9_1_0.lib")
 
 #include "ReShade/reshade.hpp"
-
 #include "Detours/include/detours.h"
 
 using namespace reshade;
