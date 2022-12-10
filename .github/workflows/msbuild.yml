@@ -1,0 +1,69 @@
+name: MSBuild
+
+on: [push]
+
+env:
+  # Path to the solution file relative to the root of the project.
+  SOLUTION_FILE_PATH: .\obse
+
+  # Configuration type to build.
+  # You can convert this to a build matrix if you need coverage of multiple configuration types.
+  # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+  BUILD_CONFIGURATION: Release
+
+jobs:
+  build:
+    runs-on: windows-2019
+    environment: General
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+
+    - name: Build
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      # Add additional options to the MSBuild command line here (like platform or verbosity level).
+      # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
+      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Prepare
+      run: |
+        Copy-Item -Path ".\obse\obse\Release 1_2_0_416\obse.dll" -Destination ".\obse_1_2_416.dll"
+        Copy-Item -Path ".\obse\obse\Release 1_2_0_416\obse.pdb" -Destination ".\obse.pdb"
+        Copy-Item -Path ".\obse\obse_editor\Release 1_2_0_0\obse_editor.dll" -Destination ".\obse_editor_1_2.dll"
+        Copy-Item -Path ".\obse\obse_editor\Release 1_2_0_0\obse_editor.pdb" -Destination ".\obse_editor.pdb"
+        Copy-Item -Path ".\obse\loader\Release\loader.exe" -Destination ".\obse_loader.exe"
+        Copy-Item -Path ".\obse\Release\steam_loader.dll" -Destination ".\obse_steam_loader.dll"
+        New-Item ".\Data\OBSE\" -ItemType Directory -Force
+        Copy-Item -Path ".\obse.ini" -Destination ".\Data\OBSE\obse.ini"
+
+
+    - name: VirusTotal
+      uses: crazy-max/ghaction-virustotal@v3
+      with:
+       vt_api_key: '${{ secrets.VIRUSTOTAL }}'
+       update_release_body: true
+       files: |
+            .\obse_1_2_416.dll
+            .\obse_editor_1_2.dll
+            .\obse_loader.exe
+            .\obse_steam_loader.dll
+ 
+    - name: Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: xOBSE
+        path: |
+            .\obse_1_2_416.dll
+            .\obse.pdb
+            .\obse_editor_1_2.dll
+            .\obse_editor.pdb
+            .\obse_loader.exe
+            .\obse_steam_loader.dll
+            .\obse_whatsnew.txt
+            .\obse_command_doc.html
+            .\README.md
+            .\Data\OBSE\obse.ini
+ 

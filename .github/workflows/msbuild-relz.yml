@@ -1,0 +1,60 @@
+name: MSBuild-Release
+on:
+  release:
+    types: [created]
+env:
+  # Path to the solution file relative to the root of the project.
+  SOLUTION_FILE_PATH: .\obse
+
+  # Configuration type to build.
+  # You can convert this to a build matrix if you need coverage of multiple configuration types.
+  # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+  BUILD_CONFIGURATION: Release
+
+jobs:
+  build:
+    runs-on: windows-2019
+    environment: General
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+
+    - name: Build
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      # Add additional options to the MSBuild command line here (like platform or verbosity level).
+      # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
+      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Prepare
+      run: |
+        New-Item ".\build\Data\OBSE\" -ItemType Directory -Force
+        Copy-Item -Path ".\obse\obse\Release 1_2_0_416\obse.dll" -Destination ".\build\obse_1_2_416.dll"
+        Copy-Item -Path ".\obse\obse\Release 1_2_0_416\obse.pdb" -Destination ".\build\obse.pdb"
+        Copy-Item -Path ".\obse\obse_editor\Release 1_2_0_0\obse_editor.dll" -Destination ".\build\obse_editor_1_2.dll"
+        Copy-Item -Path ".\obse\obse_editor\Release 1_2_0_0\obse_editor.pdb" -Destination ".\build\obse_editor.pdb"
+        Copy-Item -Path ".\obse\loader\Release\loader.exe" -Destination ".\build\obse_loader.exe"
+        Copy-Item -Path ".\obse\Release\steam_loader.dll" -Destination ".\build\obse_steam_loader.dll"
+        Copy-Item -Path ".\obse.ini" -Destination ".\build\Data\OBSE\obse.ini"
+            
+    - name: Zipping         
+      uses: thedoctor0/zip-release@main
+      with:
+        type: 'zip'
+        directory: '.\build'
+        filename: xOBSE-${{ github.event.release.tag_name }}.zip
+        
+    - name: Release            
+      uses: softprops/action-gh-release@v1
+      with:
+        files: .\build\xOBSE-${{ github.event.release.tag_name }}.zip
+
+    - name: VirusTotal
+      uses: crazy-max/ghaction-virustotal@v3
+      with:
+       vt_api_key: '${{ secrets.VIRUSTOTAL }}'
+       update_release_body: true
+       files: |
+            xOBSE-${{ github.event.release.tag_name }}.zip
